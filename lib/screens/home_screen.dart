@@ -15,6 +15,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // --- Dados MOCKADOS (hardcoded por enquanto; viram model/lógica depois) ---
+    const double total = 1440.0;
+    const double meta = 32000.0;
+    final double progresso = total / meta; // 0.045 → ~4,5%
+    final int percent = (progresso * 100).floor(); // 4
+
+    // Valores em R$ como string fixa (sem intl ainda; formatação real vem depois).
+    const String totalFmt = 'R\$ 1.440,00';
+    const String metaFmt = 'R\$ 32.000,00';
+
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -27,7 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Badge "✨ Desafio Financeiro"
+                  // Badge "💰 Desafio dos Depósitos"
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -93,6 +103,79 @@ class _HomeScreenState extends State<HomeScreen> {
                 'quadrado marcado = depósito feito',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
+              ),
+
+              const SizedBox(height: 24),
+
+              // --- Card de destaque: "Você já juntou" ---
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF00C896), Color(0xFF00A382)],
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Rótulo
+                    const Text(
+                      'Você já juntou',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+
+                    // Valor grande
+                    const Text(
+                      totalFmt,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 34,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Barra de progresso (custom)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: SizedBox(
+                        height: 8,
+                        width: double.infinity,
+                        child: Stack(
+                          children: [
+                            // Trilho (fundo translúcido)
+                            Container(color: Colors.white24),
+                            // Preenchimento (fração da largura, ancorado à esquerda)
+                            FractionallySizedBox(
+                              alignment: Alignment.centerLeft,
+                              widthFactor: progresso,
+                              child: Container(color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Rodapé: percentual + meta
+                    Text(
+                      '$percent% da sua meta de $metaFmt',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
