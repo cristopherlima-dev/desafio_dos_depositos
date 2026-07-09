@@ -27,46 +27,72 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: Padding(
+        // Corpo rolável: prepara o terreno pra lista de desafios (Item 5).
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             children: [
               const SizedBox(height: 8),
 
-              // --- Linha do topo: badge centralizado + engrenagem à direita ---
-              Stack(
-                alignment: Alignment.center,
+              // --- Linha do topo: badge + ações (novo desafio / configurações) ---
+              Row(
                 children: [
-                  // Badge "💰 Desafio dos Depósitos"
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      // 0x1F = ~12% de opacidade sobre o verde (const, sem withOpacity).
-                      color: const Color(0x1F00C896),
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    child: const Text(
-                      '💰 Desafio dos Depósitos',
-                      style: TextStyle(
-                        color: _verde,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
+                  // Badge centralizado no espaço que sobra à esquerda dos ícones.
+                  Expanded(
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          // 0x1F = ~12% de opacidade sobre o verde (const, sem withOpacity).
+                          color: const Color(0x1F00C896),
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: const Text(
+                          '💰 Desafio dos Depósitos',
+                          style: TextStyle(
+                            color: _verde,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
                       ),
                     ),
                   ),
 
+                  // Botão "+" (criar novo desafio) — sem ação real ainda
+                  IconButton(
+                    onPressed: () {
+                      debugPrint('Criar novo desafio (ainda sem ação)');
+                    },
+                    icon: const Icon(Icons.add, size: 20),
+                    tooltip: 'Criar novo desafio',
+                    style: IconButton.styleFrom(
+                      backgroundColor: _verde,
+                      foregroundColor: Colors.white,
+                      shape: const CircleBorder(),
+                      minimumSize: const Size(36, 36),
+                      padding: EdgeInsets.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+
+                  const SizedBox(width: 6),
+
                   // Engrenagem (configurações) — sem ação real ainda
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: IconButton(
-                      onPressed: () {
-                        debugPrint('Configurações (ainda sem ação)');
-                      },
-                      icon: const Icon(Icons.settings),
-                      color: Colors.grey.shade600,
+                  IconButton(
+                    onPressed: () {
+                      debugPrint('Configurações (ainda sem ação)');
+                    },
+                    icon: const Icon(Icons.settings),
+                    tooltip: 'Configurações',
+                    color: Colors.grey.shade600,
+                    style: IconButton.styleFrom(
+                      minimumSize: const Size(40, 40),
+                      padding: EdgeInsets.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                   ),
                 ],
@@ -177,6 +203,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
+
+              const SizedBox(height: 24),
             ],
           ),
         ),
