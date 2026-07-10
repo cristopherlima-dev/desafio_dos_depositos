@@ -1,4 +1,50 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+/// Formata o número digitado com separador de milhar: 3000 → 3.000
+///
+/// Só cuida do separador. O "R$ " é desenhado pelo campo (prefixText),
+/// então o usuário nunca consegue apagá-lo sem querer.
+class _MilharInputFormatter extends TextInputFormatter {
+  static const int _maxDigitos = 9; // até 999.999.999
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    // 1. Joga fora tudo que não é dígito (inclusive os pontos antigos).
+    String digitos = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    // 2. Campo vazio: deixa vazio (senão o usuário não consegue apagar tudo).
+    if (digitos.isEmpty) return const TextEditingValue();
+
+    // 3. Trava o tamanho e remove zeros à esquerda ("007" → "7").
+    if (digitos.length > _maxDigitos) {
+      digitos = digitos.substring(0, _maxDigitos);
+    }
+    final int numero = int.parse(digitos);
+
+    // 4. Reinsere os pontos e joga o cursor pro fim.
+    final String texto = _comMilhar(numero);
+    return TextEditingValue(
+      text: texto,
+      selection: TextSelection.collapsed(offset: texto.length),
+    );
+  }
+
+  /// 3000 → "3.000" · 1234567 → "1.234.567"
+  static String _comMilhar(int numero) {
+    final String s = numero.toString();
+    final StringBuffer buffer = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      // Ponto a cada 3 dígitos contados da direita pra esquerda.
+      if (i > 0 && (s.length - i) % 3 == 0) buffer.write('.');
+      buffer.write(s[i]);
+    }
+    return buffer.toString();
+  }
+}
 
 class NovoDesafioScreen extends StatefulWidget {
   const NovoDesafioScreen({super.key});
@@ -13,10 +59,12 @@ class _NovoDesafioScreenState extends State<NovoDesafioScreen> {
   static const Color _escuro = Color(0xFF1F2430);
   static const Color _borda = Color(0xFFE6E8EE);
 
-  // Controla o texto digitado no campo de nome.
   final TextEditingController _nomeController = TextEditingController();
+  final TextEditingController _valorController = TextEditingController();
 
-  // Opções de ícone. Uma lista simples de emojis.
+  // Valor total em REAIS inteiros (sem centavos). Vira centavos na fase de lógica.
+  int _valorEmReais = 0;
+
   static const List<String> _emojis = [
     '💰',
     '🎯',
@@ -32,17 +80,23 @@ class _NovoDesafioScreenState extends State<NovoDesafioScreen> {
     '📚',
   ];
 
-  // Estado da seleção: começa com um default (nunca fica vazio).
   String _emojiSelecionado = '💰';
 
   @override
   void dispose() {
-    // Libera o controller quando a tela sai da árvore. Sem isso, vaza memória.
     _nomeController.dispose();
+    _valorController.dispose();
     super.dispose();
   }
 
-  /// Monta um quadradinho de emoji selecionável.
+  /// Borda padrão dos campos (evita repetir o OutlineInputBorder 3x por campo).
+  OutlineInputBorder _borda_({Color cor = _borda, double largura = 1}) {
+    return OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: cor, width: largura),
+    );
+  }
+
   Widget _buildOpcaoEmoji(String emoji) {
     final bool selecionado = emoji == _emojiSelecionado;
 
@@ -66,6 +120,18 @@ class _NovoDesafioScreenState extends State<NovoDesafioScreen> {
         ),
         alignment: Alignment.center,
         child: Text(emoji, style: const TextStyle(fontSize: 26)),
+      ),
+    );
+  }
+
+  /// Rótulo padrão das seções do formulário.
+  Widget _rotulo(String texto) {
+    return Text(
+      texto,
+      style: const TextStyle(
+        color: _escuro,
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
       ),
     );
   }
@@ -96,14 +162,7 @@ class _NovoDesafioScreenState extends State<NovoDesafioScreen> {
               const SizedBox(height: 8),
 
               // --- Campo: nome do desafio ---
-              const Text(
-                'Nome do desafio',
-                style: TextStyle(
-                  color: _escuro,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              _rotulo('Nome do desafio'),
               const SizedBox(height: 8),
               TextField(
                 controller: _nomeController,
@@ -119,37 +178,69 @@ class _NovoDesafioScreenState extends State<NovoDesafioScreen> {
                     horizontal: 16,
                     vertical: 14,
                   ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: _borda),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: _borda),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: _verde, width: 2),
-                  ),
+                  border: _borda_(),
+                  enabledBorder: _borda_(),
+                  focusedBorder: _borda_(cor: _verde, largura: 2),
                 ),
               ),
 
               const SizedBox(height: 8),
 
               // --- Seleção de ícone ---
-              const Text(
-                'Escolha um ícone',
-                style: TextStyle(
-                  color: _escuro,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              _rotulo('Escolha um ícone'),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 12,
                 runSpacing: 12,
                 children: _emojis.map(_buildOpcaoEmoji).toList(),
+              ),
+
+              const SizedBox(height: 24),
+
+              // --- Campo: valor total ---
+              _rotulo('Valor total'),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _valorController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [_MilharInputFormatter()],
+                style: const TextStyle(
+                  color: _escuro,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+                onChanged: (texto) {
+                  // Guarda o número puro. Sem setState: nada na tela depende
+                  // dele ainda. A validação em tempo real chega na fase de lógica.
+                  final digitos = texto.replaceAll(RegExp(r'[^0-9]'), '');
+                  _valorEmReais = digitos.isEmpty ? 0 : int.parse(digitos);
+                  debugPrint('Valor: $_valorEmReais');
+                },
+                decoration: InputDecoration(
+                  prefixText: 'R\$ ',
+                  prefixStyle: const TextStyle(
+                    color: _escuro,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  hintText: '0',
+                  hintStyle: TextStyle(
+                    color: Colors.grey.shade400,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  helperText: 'Somente valores inteiros, sem centavos',
+                  helperStyle: TextStyle(color: Colors.grey.shade600),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  border: _borda_(),
+                  enabledBorder: _borda_(),
+                  focusedBorder: _borda_(cor: _verde, largura: 2),
+                ),
               ),
 
               const SizedBox(height: 24),
