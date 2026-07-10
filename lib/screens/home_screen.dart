@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'novo_desafio_screen.dart';
+import 'detalhe_desafio_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -69,131 +70,143 @@ class _HomeScreenState extends State<HomeScreen> {
     final double progresso = meta == 0 ? 0 : atual / meta;
     final int percent = (progresso * 100).floor();
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _borda),
-      ),
-      child: Column(
-        children: [
-          // --- Linha 1: emoji + nome/quadrados + ações ---
-          Row(
-            children: [
-              // Quadradinho verde com o emoji
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: _verde,
-                  borderRadius: BorderRadius.circular(14),
+    return GestureDetector(
+      // Toque em qualquer área do card abre o detalhe.
+      // Os IconButtons internos capturam o toque antes e não navegam.
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DetalheDesafioScreen(desafio: d),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: _borda),
+        ),
+        child: Column(
+          children: [
+            // --- Linha 1: emoji + nome/quadrados + ações ---
+            Row(
+              children: [
+                // Quadradinho verde com o emoji
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: _verde,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    d['emoji'] as String,
+                    style: const TextStyle(fontSize: 24),
+                  ),
                 ),
-                alignment: Alignment.center,
-                child: Text(
-                  d['emoji'] as String,
-                  style: const TextStyle(fontSize: 24),
+
+                const SizedBox(width: 12),
+
+                // Nome + contagem de quadrados
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        d['nome'] as String,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: _escuro,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${d['feitos']}/${d['quadrados']} quadrados marcados',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
 
-              const SizedBox(width: 12),
+                // Editar / excluir — sem ação real ainda
+                IconButton(
+                  onPressed: () {
+                    debugPrint('Editar "${d['nome']}" (ainda sem ação)');
+                  },
+                  icon: const Icon(Icons.edit_outlined, size: 20),
+                  tooltip: 'Editar',
+                  color: Colors.grey.shade500,
+                  visualDensity: VisualDensity.compact,
+                ),
+                IconButton(
+                  onPressed: () {
+                    debugPrint('Excluir "${d['nome']}" (ainda sem ação)');
+                  },
+                  icon: const Icon(Icons.delete_outline, size: 20),
+                  tooltip: 'Excluir',
+                  color: Colors.grey.shade500,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
 
-              // Nome + contagem de quadrados
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(height: 14),
+
+            // --- Linha 2: percentual + valores ---
+            Row(
+              children: [
+                Text(
+                  '$percent%',
+                  style: const TextStyle(
+                    color: _escuro,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '${d['atualFmt']} / ${d['metaFmt']}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 10),
+
+            // --- Linha 3: barra de progresso (mesma técnica do card verde) ---
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: SizedBox(
+                height: 8,
+                width: double.infinity,
+                child: Stack(
                   children: [
-                    Text(
-                      d['nome'] as String,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: _escuro,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${d['feitos']}/${d['quadrados']} quadrados marcados',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade600,
-                      ),
+                    Container(color: _trilho),
+                    FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: progresso,
+                      child: Container(color: _verde),
                     ),
                   ],
                 ),
               ),
-
-              // Editar / excluir — sem ação real ainda
-              IconButton(
-                onPressed: () {
-                  debugPrint('Editar "${d['nome']}" (ainda sem ação)');
-                },
-                icon: const Icon(Icons.edit_outlined, size: 20),
-                tooltip: 'Editar',
-                color: Colors.grey.shade500,
-                visualDensity: VisualDensity.compact,
-              ),
-              IconButton(
-                onPressed: () {
-                  debugPrint('Excluir "${d['nome']}" (ainda sem ação)');
-                },
-                icon: const Icon(Icons.delete_outline, size: 20),
-                tooltip: 'Excluir',
-                color: Colors.grey.shade500,
-                visualDensity: VisualDensity.compact,
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 14),
-
-          // --- Linha 2: percentual + valores ---
-          Row(
-            children: [
-              Text(
-                '$percent%',
-                style: const TextStyle(
-                  color: _escuro,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '${d['atualFmt']} / ${d['metaFmt']}',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 10),
-
-          // --- Linha 3: barra de progresso (mesma técnica do card verde) ---
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: SizedBox(
-              height: 8,
-              width: double.infinity,
-              child: Stack(
-                children: [
-                  Container(color: _trilho),
-                  FractionallySizedBox(
-                    alignment: Alignment.centerLeft,
-                    widthFactor: progresso,
-                    child: Container(color: _verde),
-                  ),
-                ],
-              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
