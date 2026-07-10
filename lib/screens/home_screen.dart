@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'novo_desafio_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -243,7 +244,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   IconButton(
                     onPressed: () {
-                      debugPrint('Criar novo desafio (ainda sem ação)');
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const NovoDesafioScreen(),
+                        ),
+                      );
                     },
                     icon: const Icon(Icons.add, size: 20),
                     tooltip: 'Criar novo desafio',
