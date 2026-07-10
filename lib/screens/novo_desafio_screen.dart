@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 /// Formata o número digitado com separador de milhar: 3000 → 3.000
+///
+/// Só cuida do separador. O "R$ " é desenhado pelo campo (prefixText),
+/// então o usuário nunca consegue apagá-lo sem querer.
 class _MilharInputFormatter extends TextInputFormatter {
   static const int _maxDigitos = 9; // até 999.999.999
 
@@ -10,14 +13,19 @@ class _MilharInputFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
+    // 1. Joga fora tudo que não é dígito (inclusive os pontos antigos).
     String digitos = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    // 2. Campo vazio: deixa vazio (senão o usuário não consegue apagar tudo).
     if (digitos.isEmpty) return const TextEditingValue();
 
+    // 3. Trava o tamanho e remove zeros à esquerda ("007" → "7").
     if (digitos.length > _maxDigitos) {
       digitos = digitos.substring(0, _maxDigitos);
     }
     final int numero = int.parse(digitos);
 
+    // 4. Reinsere os pontos e joga o cursor pro fim.
     final String texto = _comMilhar(numero);
     return TextEditingValue(
       text: texto,
@@ -25,10 +33,12 @@ class _MilharInputFormatter extends TextInputFormatter {
     );
   }
 
+  /// 3000 → "3.000" · 1234567 → "1.234.567"
   static String _comMilhar(int numero) {
     final String s = numero.toString();
     final StringBuffer buffer = StringBuffer();
     for (int i = 0; i < s.length; i++) {
+      // Ponto a cada 3 dígitos contados da direita pra esquerda.
       if (i > 0 && (s.length - i) % 3 == 0) buffer.write('.');
       buffer.write(s[i]);
     }
@@ -55,6 +65,7 @@ class NovoDesafioScreen extends StatefulWidget {
 }
 
 class _NovoDesafioScreenState extends State<NovoDesafioScreen> {
+  // Mesmas cores da HomeScreen (por ora duplicadas; centralizar depois).
   static const Color _verde = Color(0xFF00C896);
   static const Color _escuro = Color(0xFF1F2430);
   static const Color _borda = Color(0xFFE6E8EE);
@@ -62,6 +73,7 @@ class _NovoDesafioScreenState extends State<NovoDesafioScreen> {
   final TextEditingController _nomeController = TextEditingController();
   final TextEditingController _valorController = TextEditingController();
 
+  // Valor total em REAIS inteiros (sem centavos). Vira centavos na fase de lógica.
   int _valorEmReais = 0;
 
   static const List<String> _emojis = [
@@ -81,17 +93,18 @@ class _NovoDesafioScreenState extends State<NovoDesafioScreen> {
 
   String _emojiSelecionado = '💰';
 
-  // --- Novos estados do 6d ---
   int _quadrados = 100;
   ModoDistribuicao _modo = ModoDistribuicao.iguais;
 
   @override
   void dispose() {
+    // Libera os controllers quando a tela sai da árvore. Sem isso, vaza memória.
     _nomeController.dispose();
     _valorController.dispose();
     super.dispose();
   }
 
+  /// Borda padrão dos campos (evita repetir o OutlineInputBorder 3x por campo).
   OutlineInputBorder _borda_({Color cor = _borda, double largura = 1}) {
     return OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),
@@ -99,6 +112,7 @@ class _NovoDesafioScreenState extends State<NovoDesafioScreen> {
     );
   }
 
+  /// Rótulo padrão das seções do formulário.
   Widget _rotulo(String texto) {
     return Text(
       texto,
@@ -110,6 +124,7 @@ class _NovoDesafioScreenState extends State<NovoDesafioScreen> {
     );
   }
 
+  /// Monta um quadradinho de emoji selecionável.
   Widget _buildOpcaoEmoji(String emoji) {
     final bool selecionado = emoji == _emojiSelecionado;
 
@@ -239,10 +254,27 @@ class _NovoDesafioScreenState extends State<NovoDesafioScreen> {
     );
   }
 
+  /// Por enquanto só imprime o que foi escolhido e volta.
+  /// A validação (seção 6 do CONTEXTO) e a persistência vêm na fase de lógica.
+  void _criarDesafio() {
+    final String nome = _nomeController.text.trim();
+
+    debugPrint('--- Novo desafio ---');
+    debugPrint('Nome:      "$nome"');
+    debugPrint('Ícone:     $_emojiSelecionado');
+    debugPrint('Valor:     R\$ $_valorEmReais');
+    debugPrint('Quadrados: $_quadrados');
+    debugPrint('Modo:      ${_modo.name} (${_modo.titulo})');
+
+    // Fecha a tela e volta pra Home.
+    Navigator.pop(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        // Sem cor de fundo própria: deixa o F5F6FA do tema aparecer.
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
@@ -254,6 +286,7 @@ class _NovoDesafioScreenState extends State<NovoDesafioScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        // A seta de voltar é inserida automaticamente pelo Navigator.
         iconTheme: const IconThemeData(color: _escuro),
       ),
       body: SafeArea(
@@ -313,6 +346,8 @@ class _NovoDesafioScreenState extends State<NovoDesafioScreen> {
                   fontWeight: FontWeight.bold,
                 ),
                 onChanged: (texto) {
+                  // Guarda o número puro. Sem setState: nada na tela depende
+                  // dele ainda. A validação em tempo real chega na fase de lógica.
                   final digitos = texto.replaceAll(RegExp(r'[^0-9]'), '');
                   _valorEmReais = digitos.isEmpty ? 0 : int.parse(digitos);
                   debugPrint('Valor: $_valorEmReais');
@@ -364,7 +399,35 @@ class _NovoDesafioScreenState extends State<NovoDesafioScreen> {
               const SizedBox(height: 12),
               ...ModoDistribuicao.values.map(_buildOpcaoModo),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
+
+              // --- Botão: criar desafio ---
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _criarDesafio,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _verde,
+                    foregroundColor: Colors.white,
+                    // Já preparado: quando onPressed virar null (form inválido),
+                    // o botão assume este cinza automaticamente.
+                    disabledBackgroundColor: Colors.grey.shade300,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  child: const Text('Criar desafio'),
+                ),
+              ),
+
+              // Respiro no fim + espaço pro teclado não cobrir o botão.
+              SizedBox(height: 24 + MediaQuery.viewInsetsOf(context).bottom),
             ],
           ),
         ),
